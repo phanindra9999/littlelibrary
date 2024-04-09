@@ -4,19 +4,7 @@ import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 
 const BrowsePage = () => {
-  const [books, setBooks] = useState(Array.from({ length: 10 }, (_, index) => ({
-    id: index,
-    volumeInfo: {
-      title: 'Placeholder Title',
-      authors: ['Placeholder Author'],
-      categories: ['Placeholder Genre'],
-      imageLinks: {
-        thumbnail: 'https://via.placeholder.com/128x192.png'
-      },
-      description: 'Placeholder description'
-    }
-  })));
-
+  const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,6 +33,22 @@ const BrowsePage = () => {
 
     fetchInitialBooks();
   }, []);
+
+  const applyFilters = () => {
+    let filteredBooks = [...books];
+
+    if (selectedGenre) {
+      filteredBooks = filteredBooks.filter(book => book.volumeInfo.categories?.includes(selectedGenre));
+    }
+
+    if (selectedAuthor) {
+      filteredBooks = filteredBooks.filter(book => book.volumeInfo.authors?.includes(selectedAuthor));
+    }
+
+    return filteredBooks;
+  };
+
+  const filteredBooks = applyFilters();
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -82,6 +86,21 @@ const BrowsePage = () => {
       navigate(`/book-details/${selectedBook.id}`, { state: { book: selectedBook } });
     }
   };
+
+  const [pdfUrl, setPdfUrl] = useState(null);
+
+  const handleRead = async () => {
+    if (selectedBook && selectedBook.accessInfo && selectedBook.accessInfo.pdf && selectedBook.accessInfo.pdf.downloadLink) {
+      const pdfResponse = await axios.get(selectedBook.accessInfo.pdf.downloadLink, {
+        responseType: 'arraybuffer',
+      });
+
+      const blob = new Blob([pdfResponse.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+    }
+  };
+  
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -140,7 +159,7 @@ const BrowsePage = () => {
       </div>
 
       <div className="books-list">
-        {books.map((book, index) => (
+        {filteredBooks.map((book, index) => (
           <div key={index} className="book-card" onClick={() => handleBookClick(book)}>
             <img src={book.volumeInfo.imageLinks?.thumbnail || 'https://via.placeholder.com/128x192.png'} alt={book.volumeInfo.title} className="book-cover" />
             <h3 className="book-title">{book.volumeInfo.title}</h3>
